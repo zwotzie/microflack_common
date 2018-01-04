@@ -133,13 +133,13 @@ def register():
             else:
                 # service registration for the haproxy load balancer
                 if 'ZK' in os.environ:
-                    zk.write('/services/{}/location'.format(service_name), get_service_url())
-                    zk.write('/services/{}/backend/balance'.format(service_name), balance_algorithm)
-                    zk.write('/services/{}/upstream/{}'.format(service_name, instance_name), service_address)
+                    zk.write('/haproxy/{}/location'.format(service_name), get_service_url())
+                    zk.write('/haproxy/{}/backend/balance'.format(service_name), balance_algorithm)
+                    zk.write('/haproxy/{}/upstream/{}'.format(service_name, instance_name), service_address)
                 else:
-                    etcd.write('/services/{}/location'.format(service_name), get_service_url())
-                    etcd.write('/services/{}/backend/balance'.format(service_name), balance_algorithm)
-                    etcd.write('/services/{}/upstream/{}'.format(service_name, instance_name), service_address, ttl=50)
+                    etcd.write('/haproxy/{}/location'.format(service_name), get_service_url())
+                    etcd.write('/haproxy/{}/backend/balance'.format(service_name), balance_algorithm)
+                    etcd.write('/haproxy/{}/upstream/{}'.format(service_name, instance_name), service_address, ttl=50)
         except:
             # we had a failure, hopefully we'll get it next time
             pass
