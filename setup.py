@@ -9,6 +9,7 @@ setup(
         'cachetools',
         'docker',
         'flask-httpauth',
+        'kazoo',
         'python-etcd',
         'pyjwt'
     ]
