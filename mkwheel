@@ -6,7 +6,8 @@
 # To build all versions, pass "all" as argument: ./mkwheel all
 
 if [[ "$WHEELHOUSE" == "" ]]; then
-    echo Variable WHEELHOUSE is undefined.
+    echo "Variable WHEELHOUSE is undefined."
+    echo "export WHEELHOUSE=~/py_wheelhouse"
     exit 1
 fi
 if [[ "$(git diff)" != "" ]]; then
