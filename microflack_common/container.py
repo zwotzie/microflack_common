@@ -4,7 +4,10 @@ import time
 
 import docker
 
-from microflack_common.etcd import etcd_client
+if 'ZK' in os.environ:
+    from microflack_common.zookeeper import zk_client
+else:
+    from microflack_common.etcd import etcd_client
 
 docker_attrs = None
 
@@ -102,41 +105,41 @@ def register():
     load_balancer = os.environ.get('LOAD_BALANCER', 'haproxy')
     balance_algorithm = os.environ.get('LB_ALGORITHM', 'roundrobin')
 
-    # open a client session with etcd
-    etcd = etcd_client()
+    if 'ZK' in os.environ:
+        # open a client session with zookeeper
+        zk = zk_client()
+    else:
+        # open a client session with etcd
+        etcd = etcd_client()
 
     while True:
         try:
             if load_balancer == 'traefik':
                 # service registration for the traefik load balancer
-                backend = '/traefik/backends/{}-backend/servers/{}/url'.format(
-                    service_name, instance_name)
-                etcd.write(backend + '/url', 'http://' + service_address,
-                           ttl=50)
+                backend = '/traefik/backends/{}-backend/servers/{}/url'.format(service_name, instance_name)
+                etcd.write(backend + '/url', 'http://' + service_address, ttl=50)
                 etcd.write(backend + '/weight', '1', ttl=50)
-                if balance_algorithm == 'source':
-                    etcd.write('/traefik/backends/{}-backend/loadbalancer'
-                               '/sticky'.format(service_name), 'true')
-                else:
-                    etcd.write('/traefik/backends/{}-backend/loadbalancer'
-                               '/sticky'.format(service_name), 'false')
 
-                frontend = '/traefik/frontends/{}-frontend'.format(
-                    service_name)
-                etcd.write(frontend + '/backend', service_name + '-backend',
-                           ttl=50)
+                if balance_algorithm == 'source':
+                    etcd.write('/traefik/backends/{}-backend/loadbalancer/sticky'.format(service_name), 'true')
+                else:
+                    etcd.write('/traefik/backends/{}-backend/loadbalancer/sticky'.format(service_name), 'false')
+
+                frontend = '/traefik/frontends/{}-frontend'.format(service_name)
+
+                etcd.write(frontend + '/backend', service_name + '-backend', ttl=50)
                 etcd.write(frontend + '/entrypoints', 'http', ttl=50)
-                etcd.write(frontend + '/routes/path/rule',
-                           'PathPrefix:' + get_service_url(), ttl=50)
+                etcd.write(frontend + '/routes/path/rule', 'PathPrefix:' + get_service_url(), ttl=50)
             else:
                 # service registration for the haproxy load balancer
-                etcd.write('/services/{}/location'.format(service_name),
-                           get_service_url())
-                etcd.write('/services/{}/backend/balance'.format(service_name),
-                           balance_algorithm)
-                etcd.write('/services/{}/upstream/{}'.format(service_name,
-                                                             instance_name),
-                           service_address, ttl=50)
+                if 'ZK' in os.environ:
+                    zk.write('/services/{}/location'.format(service_name), get_service_url())
+                    zk.write('/services/{}/backend/balance'.format(service_name), balance_algorithm)
+                    zk.write('/services/{}/upstream/{}'.format(service_name, instance_name), service_address)
+                else:
+                    etcd.write('/services/{}/location'.format(service_name), get_service_url())
+                    etcd.write('/services/{}/backend/balance'.format(service_name), balance_algorithm)
+                    etcd.write('/services/{}/upstream/{}'.format(service_name, instance_name), service_address, ttl=50)
         except:
             # we had a failure, hopefully we'll get it next time
             pass
