@@ -23,6 +23,7 @@ class zk_client():
 
 
     def write(self, node, val):
+        val = bytes(val, 'utf-8')
         # Determine if a node exists
         if self.zk.exists(node):
             self.zk.set(node, val)
