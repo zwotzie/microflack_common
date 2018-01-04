@@ -49,3 +49,6 @@ dump.rdb
 build
 dist
 *.whl
+
+# PyCharm
+.idea
