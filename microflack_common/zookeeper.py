@@ -1,32 +1,36 @@
 import os
 
-from kazoo.client import KazooClient
+import kazoo.client
+import kazoo.exceptions
 
 
 class zk_client():
     """zookeeper client class.
 
-    This Class enables the useage of zookeeper as backend.
+    This Class enables the usage of zookeeper as backend.
 
-    Endpoints must be configured in the ZK environment variable.
+    ZK Quorum Endpoints must be configured in the ZK environment variable.
     """
+
+    kz_retry = kazoo.client.KazooRetry(max_tries=-1, delay=0.5, max_delay=30)
 
     def __init__(self):
         if 'ZK' not in os.environ:
             raise RuntimeError('zookeeper ensemble service has not been configured.')
 
+        self.state = None
         self.connect()
 
     def connect(self):
-        self.zk = KazooClient(hosts=os.environ['ZK'])
-        self.zk.start()
+        self.zk = kazoo.client.KazooClient(hosts=os.environ['ZK'], connection_retry=zk_client.kz_retry)
+        self.zk.start(timeout=30)
 
+    def check_session_state(self):
+        if self.zk.state != kazoo.client.KazooState.CONNECTED:
+            self.connect()
 
-    def write(self, node, val):
-        val = bytes(val, 'utf-8')
-        # Determine if a node exists
-        if self.zk.exists(node):
-            self.zk.set(node, val)
-        else:
-            self.zk.ensure_path(node)
-            self.zk.set(node, val)
+    def write(self, path, val):
+        self.check_session_state()
+
+        if not self.zk.exists(path):
+            self.zk.create(path=path, value=val.encode('utf-8'), ephemeral=True, makepath=True)
