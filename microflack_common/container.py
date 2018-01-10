@@ -79,8 +79,7 @@ def get_service_address():
     if not is_dockerized():
         raise RuntimeError('Cannot determine service name')
     attrs = get_docker_attributes()
-    ip_address = os.environ.get('HOST_IP_ADDRESS',
-                                attrs['NetworkSettings']['Gateway'])
+    ip_address = os.environ.get('HOST_IP_ADDRESS', attrs['NetworkSettings']['Gateway'])
     port = list(attrs['NetworkSettings']['Ports'].values())[0][0]['HostPort']
     return '{}:{}'.format(ip_address, port)
 
@@ -104,6 +103,7 @@ def register():
     service_address = get_service_address()
     load_balancer = os.environ.get('LOAD_BALANCER', 'haproxy')
     balance_algorithm = os.environ.get('LB_ALGORITHM', 'roundrobin')
+    lb_host = os.environ.get('LB_HOST', '-')
 
     if 'ZK' in os.environ:
         # open a client session with zookeeper
@@ -130,16 +130,16 @@ def register():
                 etcd.write(frontend + '/backend', service_name + '-backend', ttl=50)
                 etcd.write(frontend + '/entrypoints', 'http', ttl=50)
                 etcd.write(frontend + '/routes/path/rule', 'PathPrefix:' + get_service_url(), ttl=50)
-            else:
+            else: # load_balancer == 'haproxy'
                 # service registration for the haproxy load balancer
                 if 'ZK' in os.environ:
-                    zk.write('/haproxy/{}/location'.format(service_name), get_service_url())
-                    zk.write('/haproxy/{}/backend/balance'.format(service_name), balance_algorithm)
-                    zk.write('/haproxy/{}/upstream/{}'.format(service_name, instance_name), service_address)
+                    zk.write('/haproxy/{}/{}/location'.format(lb_host, service_name), get_service_url())
+                    zk.write('/haproxy/{}/{}/backend/balance'.format(lb_host, service_name), balance_algorithm)
+                    zk.write('/haproxy/{}/{}/upstream/{}'.format(lb_host, service_name, instance_name), service_address)
                 else:
-                    etcd.write('/haproxy/{}/location'.format(service_name), get_service_url())
-                    etcd.write('/haproxy/{}/backend/balance'.format(service_name), balance_algorithm)
-                    etcd.write('/haproxy/{}/upstream/{}'.format(service_name, instance_name), service_address, ttl=50)
+                    etcd.write('/haproxy/{}/{}/location'.format(lb_host, service_name), get_service_url())
+                    etcd.write('/haproxy/{}/{}/backend/balance'.format(lb_host, service_name), balance_algorithm)
+                    etcd.write('/haproxy/{}/{}/upstream/{}'.format(lb_host, service_name, instance_name), service_address, ttl=50)
         except:
             # we had a failure, hopefully we'll get it next time
             pass
