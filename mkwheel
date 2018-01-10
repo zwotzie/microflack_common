@@ -12,7 +12,7 @@ if [[ "$WHEELHOUSE" == "" ]]; then
 fi
 if [[ "$(git diff)" != "" ]]; then
     echo There are uncomitted changes. Please save your work and try again.
-    exit 1
+#    exit 1
 fi
 mkdir -p $WHEELHOUSE
 
