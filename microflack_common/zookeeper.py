@@ -21,6 +21,10 @@ class zk_client():
         self.state = None
         self.connect()
 
+        # just to be sure basepath of configurations is always on zookeeper
+        if not self.zk.exists('/haproxy'):
+            self.zk.create(path='/haproxy', ephemeral=False)
+
     def connect(self):
         self.zk = kazoo.client.KazooClient(hosts=os.environ['ZK'], connection_retry=zk_client.kz_retry)
         self.zk.start(timeout=30)
