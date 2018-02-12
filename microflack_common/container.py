@@ -91,6 +91,13 @@ def get_service_url():
     # the default location for each service is /api/<service>
     return '/api/{}'.format(get_service_name())
 
+def get_backend_service_url():
+    """Return the root URL of this service."""
+    if 'BACKEND_URL' in os.environ:
+        return os.environ['BACKEND_URL']
+    # the default location for each service is /api/<service>
+    return get_service_url()
+
 
 def register():
     """Register this service with the system.
@@ -134,6 +141,7 @@ def register():
                 # service registration for the haproxy load balancer
                 if 'ZK' in os.environ:
                     zk.write('/haproxy/{}/{}/location'.format(lb_host, service_name), get_service_url())
+                    zk.write('/haproxy/{}/{}/backend_location'.format(lb_host, service_name), get_backend_service_url())
                     zk.write('/haproxy/{}/{}/backend/balance'.format(lb_host, service_name), balance_algorithm)
                     zk.write('/haproxy/{}/{}/upstream/{}'.format(lb_host, service_name, instance_name), service_address)
                 else:
